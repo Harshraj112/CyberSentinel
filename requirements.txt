@@ -1,9 +1,15 @@
 python-dotenv
 pandas
-requests
 numpy
-flask
+pymongo
+certifi
+pymongo[srv]
 scikit-learn
-matplotlib
-seaborn
-tensorflow
+mlflow
+pyaml
+dagshub
+fastapi
+uvicorn
+python-multipart
+
+##-e .
