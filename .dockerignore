@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Logs and databases
+*.log
+logs/
+mlruns/
+*.db
+*.sqlite
+
+# Artifacts and outputs
+Artifacts/
+prediction_output/
+*.csv
+*.pkl
+*.h5
+*.pt
+*.onnx
+
+# Documentation
+README.md
+*.md
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment files
+.env
+.env.*
+
+# Jupyter
+notebooks/
+*.ipynb
+.ipynb_checkpoints/
+
+# Data
+Network_Data/
+data/
+*.parquet
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+ml_pipeline_workflow.png
