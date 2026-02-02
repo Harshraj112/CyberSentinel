@@ -23,7 +23,12 @@ import pandas as pd
 from cybersentinel.utils.main_utils.utils import load_object
 
 from cybersentinel.utils.ml_utils.model.estimator import NetworkModel
+from url_feature_extractor import URLFeatureExtractor
+from pydantic import BaseModel
 
+# Request model for URL analysis
+class URLRequest(BaseModel):
+    url: str
 
 client = pymongo.MongoClient(mongo_db_url, tlsCAFile=ca)
 
@@ -88,6 +93,45 @@ async def predict_route(request: Request,file: UploadFile = File(...)):
         
     except Exception as e:
             raise NetworkSecurityException(e,sys)
+
+@app.post("/analyze-url")
+async def analyze_url(url_request: URLRequest):
+    """
+    Analyze a URL for phishing detection
+    Accepts: {"url": "https://example.com"}
+    Returns: Prediction result with confidence
+    """
+    try:
+        # Extract features from URL
+        extractor = URLFeatureExtractor(url_request.url)
+        features = extractor.extract_all_features()
+        
+        # Convert features to DataFrame
+        df = pd.DataFrame([features])
+        
+        # Load model and preprocessor
+        preprocessor = load_object("final_model/preprocessor.pkl")
+        final_model = load_object("final_model/model.pkl")
+        network_model = NetworkModel(preprocessor=preprocessor, model=final_model)
+        
+        # Make prediction
+        prediction = network_model.predict(df)
+        
+        # Interpret result
+        is_safe = int(prediction[0]) == 1
+        result = {
+            "url": url_request.url,
+            "is_safe": is_safe,
+            "prediction": "Safe" if is_safe else "Phishing/Malicious",
+            "risk_level": "Low" if is_safe else "High",
+            "features_extracted": features,
+            "recommendation": "This URL appears to be safe." if is_safe else "⚠️ WARNING: This URL shows signs of phishing or malicious activity. Do not proceed!"
+        }
+        
+        return result
+        
+    except Exception as e:
+        raise NetworkSecurityException(e, sys)
 
     
 if __name__=="__main__":
