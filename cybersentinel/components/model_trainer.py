@@ -27,7 +27,10 @@ import mlflow
 from urllib.parse import urlparse
 
 import dagshub
-dagshub.init(repo_owner='Harshraj112', repo_name='networkSecurity', mlflow=True)
+
+# IMPORTANT: DagsHub init is commented out to prevent OAuth flow during deployment
+# Only uncomment this when running training locally or set DAGSHUB_TOKEN environment variable
+# dagshub.init(repo_owner='Harshraj112', repo_name='networkSecurity', mlflow=True)
 
 # Comment out DagHub configuration to use local MLflow tracking
 # os.environ["MLFLOW_TRACKING_URI"]="https://dagshub.com/harshraj112/cybersentinel.mlflow"
