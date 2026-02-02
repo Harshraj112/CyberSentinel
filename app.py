@@ -135,4 +135,6 @@ async def analyze_url(url_request: URLRequest):
 
     
 if __name__=="__main__":
-    app_run(app,host="0.0.0.0",port=8000)
+    # Get port from environment variable (Render sets this) or default to 8000
+    port = int(os.getenv("PORT", 8000))
+    app_run(app, host="0.0.0.0", port=port)
