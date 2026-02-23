@@ -5,14 +5,15 @@ pymongo
 certifi
 pymongo[srv]
 scikit-learn
+xgboost
 mlflow
 pyaml
 dagshub
 fastapi
 uvicorn
 python-multipart
+jinja2
+aiofiles
 beautifulsoup4
 requests
 python-whois
-
-##-e .

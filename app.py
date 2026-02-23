@@ -56,6 +56,11 @@ templates = Jinja2Templates(directory="./templates")
 async def index():
     return RedirectResponse(url="/docs")
 
+@app.get("/health")
+async def health():
+    """Health check endpoint for Render"""
+    return {"status": "ok", "service": "CyberSentinel ML API"}
+
 @app.get("/train")
 async def train_route():
     try:
@@ -154,6 +159,9 @@ async def analyze_url(url_request: URLRequest):
 
     
 if __name__=="__main__":
-    # Get port from environment variable (Render sets this) or default to 8000
-    port = int(os.getenv("PORT", 8000))
+    # Render sets PORT dynamically; default 10000 locally
+    port = int(os.getenv("PORT", 10000))
+    # Ensure required directories exist
+    os.makedirs("prediction_output", exist_ok=True)
+    os.makedirs("logs", exist_ok=True)
     app_run(app, host="0.0.0.0", port=port)

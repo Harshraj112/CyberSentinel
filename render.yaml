@@ -1,12 +1,10 @@
 services:
   - type: web
-    name: network-security
-    env: python
+    name: cybersentinel-ml
+    env: docker
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /docs
+    healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.10.0
+      - key: MONGODB_URL_KEY
+        sync: false   # Set this manually in Render dashboard

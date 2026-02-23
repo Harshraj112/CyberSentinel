@@ -208,7 +208,7 @@ __marimo__/
 Artifacts/
 
 # ML/Data Science specific
-# Model files
+# Model files — *.pkl ignored globally BUT final_model/ is kept for deployment
 *.h5
 *.hdf5
 *.pkl
@@ -223,6 +223,10 @@ Artifacts/
 saved_models/
 models/
 checkpoints/
+
+# Exception: keep trained model for Render deployment
+!final_model/
+!final_model/*.pkl
 
 # MLflow
 mlruns/
