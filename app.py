@@ -99,7 +99,7 @@ async def analyze_url(url_request: URLRequest):
     """
     Analyze a URL for phishing detection
     Accepts: {"url": "https://example.com"}
-    Returns: Prediction result with confidence
+    Returns: Prediction result with real confidence percentages
     """
     try:
         # Extract features from URL
@@ -112,18 +112,37 @@ async def analyze_url(url_request: URLRequest):
         # Load model and preprocessor
         preprocessor = load_object("final_model/preprocessor.pkl")
         final_model = load_object("final_model/model.pkl")
-        network_model = NetworkModel(preprocessor=preprocessor, model=final_model)
         
-        # Make prediction
-        prediction = network_model.predict(df)
+        # Transform features
+        x_transform = preprocessor.transform(df)
+        
+        # Get binary prediction
+        prediction = final_model.predict(x_transform)
+        
+        # Get real probability scores from model
+        # classes_ = [0.0 = phishing, 1.0 = safe]
+        proba = final_model.predict_proba(x_transform)[0]
+        phishing_confidence = round(float(proba[0]) * 100, 1)  # class 0 = phishing
+        safe_confidence = round(float(proba[1]) * 100, 1)      # class 1 = safe
         
         # Interpret result
         is_safe = int(prediction[0]) == 1
+        
+        # Determine risk level based on probability
+        if safe_confidence >= 80:
+            risk_level = "Low"
+        elif safe_confidence >= 50:
+            risk_level = "Medium"
+        else:
+            risk_level = "High"
+        
         result = {
             "url": url_request.url,
             "is_safe": is_safe,
             "prediction": "Safe" if is_safe else "Phishing/Malicious",
-            "risk_level": "Low" if is_safe else "High",
+            "risk_level": risk_level,
+            "safe_confidence": safe_confidence,
+            "phishing_confidence": phishing_confidence,
             "features_extracted": features,
             "recommendation": "This URL appears to be safe." if is_safe else "⚠️ WARNING: This URL shows signs of phishing or malicious activity. Do not proceed!"
         }

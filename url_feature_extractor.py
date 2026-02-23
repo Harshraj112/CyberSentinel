@@ -116,12 +116,29 @@ class URLFeatureExtractor:
     
     # Feature 8: SSLfinal_State
     def ssl_final_state(self):
-        """Check SSL certificate"""
+        """Check SSL certificate validity (not just presence)"""
         try:
-            if self.url.startswith('https'):
-                return 1
-            else:
+            if not self.url.startswith('https'):
                 return -1
+            # Try to actually verify the SSL certificate
+            import ssl, socket
+            context = ssl.create_default_context()
+            parsed = urlparse(self.url)
+            hostname = parsed.hostname
+            port = parsed.port or 443
+            try:
+                with socket.create_connection((hostname, port), timeout=5) as sock:
+                    with context.wrap_socket(sock, server_hostname=hostname) as ssock:
+                        cert = ssock.getpeercert()
+                        # Check certificate not expired
+                        not_after = ssl.cert_time_to_seconds(cert['notAfter'])
+                        import time
+                        if not_after < time.time():
+                            return -1  # Expired cert
+                        return 1  # Valid SSL
+            except (ssl.SSLError, ssl.CertificateError, ConnectionRefusedError, OSError):
+                # HTTPS but invalid/self-signed cert is suspicious
+                return 0
         except:
             return -1
     
@@ -372,20 +389,77 @@ class URLFeatureExtractor:
     
     # Feature 26: web_traffic
     def web_traffic(self):
-        """Check web traffic (simplified)"""
+        """Estimate web traffic using heuristic signals"""
         try:
-            # This is a simplified version
-            # In production, you'd use Alexa API or similar
+            domain = self.domain.lower()
+            # Well-known high-traffic domains
+            popular_tlds = ['.com', '.org', '.net', '.edu', '.gov']
+            # Suspicious signals that indicate low/fake traffic
+            suspicious_keywords = [
+                'verify', 'secure', 'login', 'update', 'confirm', 'account',
+                'banking', 'paypal', 'amazon', 'apple', 'microsoft', 'google',
+                'signin', 'wallet', 'support', 'help', 'service', 'alert',
+                'click', 'free', 'win', 'prize', 'lucky', 'offer'
+            ]
+            # Known legitimate high-traffic domains
+            known_safe = [
+                'google.com', 'youtube.com', 'facebook.com', 'twitter.com', 'x.com',
+                'instagram.com', 'linkedin.com', 'github.com', 'wikipedia.org',
+                'amazon.com', 'microsoft.com', 'apple.com', 'netflix.com',
+                'reddit.com', 'yahoo.com', 'bing.com', 'stackoverflow.com'
+            ]
+            if any(domain == safe or domain.endswith('.' + safe) for safe in known_safe):
+                return 1
+            # Check for typosquatting / brand impersonation in domain
+            sus_brands = ['paypa', 'amaz0n', 'g00gle', 'micros0ft', 'app1e', 'faceb00k', 'netfl1x']
+            if any(b in domain for b in sus_brands):
+                return -1
+            # Check if domain name itself has suspicious keywords
+            domain_name_only = domain.split('.')[0]
+            sus_count = sum(1 for kw in suspicious_keywords if kw in domain_name_only)
+            if sus_count >= 2:
+                return -1
+            elif sus_count == 1:
+                return 0
             return 1
         except:
             return -1
     
     # Feature 27: Page_Rank
     def page_rank(self):
-        """Check page rank (simplified)"""
+        """Estimate page rank using domain trust heuristics"""
         try:
-            # This is a simplified version
-            # In production, you'd use Google PageRank API
+            domain = self.domain.lower()
+            # Trusted TLDs give higher trust
+            trusted_tlds = ['.com', '.org', '.net', '.edu', '.gov', '.co.uk', '.de', '.fr', '.jp']
+            suspicious_tlds = [
+                '.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top', '.click',
+                '.work', '.date', '.faith', '.review', '.stream', '.gdn',
+                '.win', '.download', '.racing', '.loan', '.accountant', '.party'
+            ]
+            # Check for suspicious TLDs
+            if any(domain.endswith(tld) for tld in suspicious_tlds):
+                return -1
+            # Known legitimate domains get good rank
+            known_safe = [
+                'google.com', 'youtube.com', 'facebook.com', 'amazon.com',
+                'microsoft.com', 'apple.com', 'github.com', 'wikipedia.org',
+                'linkedin.com', 'twitter.com', 'reddit.com', 'netflix.com'
+            ]
+            if any(domain == safe or domain.endswith('.' + safe) for safe in known_safe):
+                return 1
+            # Check for number substitutions (l33t speak) in domain - phishing signal
+            domain_name_only = domain.split('.')[0]
+            has_number_substitution = bool(re.search(r'[0-9]', domain_name_only) and 
+                                           re.search(r'[a-z]', domain_name_only))
+            if has_number_substitution:
+                # Numbers mixed with letters in domain name is suspicious
+                suspicious_patterns = re.findall(r'(payp|amaz|googl|micros|faceb|app1|netfl)', domain_name_only)
+                if suspicious_patterns:
+                    return -1
+            # Check domain length - very long domains are suspicious
+            if len(domain_name_only) > 20:
+                return 0
             return 1
         except:
             return -1
@@ -418,10 +492,51 @@ class URLFeatureExtractor:
     
     # Feature 30: Statistical_report
     def statistical_report(self):
-        """Check if domain is in statistical report"""
+        """Check domain against phishing pattern heuristics"""
         try:
-            # This would check against known phishing databases
-            # Simplified for now
+            domain = self.domain.lower()
+            url_lower = self.url.lower()
+            domain_name_only = domain.split('.')[0] if '.' in domain else domain
+
+            # Known phishing / malicious domain patterns
+            phishing_patterns = [
+                # Brand impersonation with numbers
+                r'paypa[l1]', r'pay-?pal', r'paypai',
+                r'amaz[o0]n', r'amaz[o0]n-',
+                r'g[o0]{2}gle', r'g[o0]ogle',
+                r'micr[o0]s[o0]ft', r'micros[o0]ft',
+                r'app[l1]e', r'app[l1]e-',
+                r'faceb[o0]{2}k', r'faceb[o0]ok',
+                r'netfl[i1]x',
+                r'[a-z]+-?verify-?[a-z]+',
+                r'[a-z]+-?login-?[a-z]+',
+                r'[a-z]+-?secure-?[a-z]+',
+                r'[a-z]+-?account-?[a-z]+',
+                r'[a-z]+-?update-?[a-z]+',
+                r'[a-z]+-?confirm-?[a-z]+',
+            ]
+            for pattern in phishing_patterns:
+                if re.search(pattern, domain_name_only):
+                    return -1
+
+            # Suspicious URL path keywords
+            suspicious_paths = [
+                'verify', 'login', 'signin', 'confirm', 'secure', 'update',
+                'account', 'banking', 'credential', 'password', 'phish'
+            ]
+            path = urlparse(self.url).path.lower()
+            sus_path_count = sum(1 for kw in suspicious_paths if kw in path)
+            if sus_path_count >= 2:
+                return -1
+
+            # Check for excessive hyphens in domain (phishing signal)
+            if domain_name_only.count('-') >= 3:
+                return -1
+
+            # Check for IP address in URL (already covered but double-check)
+            if re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', domain):
+                return -1
+
             return 1
         except:
             return 1
